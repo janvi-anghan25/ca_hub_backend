@@ -25,6 +25,7 @@ import documentRoutes from './routes/documentRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import superAdminRoutes from './routes/superAdminRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -115,6 +116,7 @@ app.use(`${API_PREFIX}/documents`, documentRoutes);
 app.use(`${API_PREFIX}/employees`, employeeRoutes);
 app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationRoutes);
+app.use(`${API_PREFIX}/superadmin`, superAdminRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -9,8 +9,9 @@ import {
   getProfile,
   changePassword,
   logout,
+  createEmployeeUser,
 } from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js';
+import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
   registerSchema,
@@ -18,6 +19,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  createEmployeeSchema,
 } from '../validators/authValidator.js';
 
 const router = Router();
@@ -48,5 +50,14 @@ router.post('/reset-password', sensitiveActionLimiter, validate(resetPasswordSch
 router.post('/logout', protect, logout);
 router.get('/profile', protect, getProfile);
 router.put('/change-password', protect, validate(changePasswordSchema), changePassword);
+
+// Admin creates an employee account within their own office
+router.post(
+  '/create-employee',
+  protect,
+  restrictTo('admin', 'superadmin'),
+  validate(createEmployeeSchema),
+  createEmployeeUser
+);
 
 export default router;

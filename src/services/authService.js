@@ -149,6 +149,32 @@ const authService = {
     logger.info(`Password changed for user: ${user.email}`);
   },
 
+  // ─── Create Employee User (by Admin) ─────────────────────────────────────────
+  async createEmployeeUser({ name, email, password, mobile }, adminUser) {
+    if (!adminUser.office) {
+      throw new AppError('Admin is not associated with an office', 400, 'NO_OFFICE');
+    }
+
+    const existing = await userRepository.findByEmail(email);
+    if (existing) throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
+
+    const employee = await userRepository.create({
+      name,
+      email,
+      password,
+      mobile,
+      role: 'employee',
+      office: adminUser.office,
+    });
+
+    emailService.sendWelcomeEmail(employee).catch((err) =>
+      logger.error('Welcome email failed for employee:', err.message)
+    );
+
+    logger.info(`Admin ${adminUser.email} created employee account: ${email}`);
+    return employee.toPublicJSON();
+  },
+
   // ─── Verify Token ────────────────────────────────────────────────────────────
   verifyToken(token) {
     try {

@@ -64,3 +64,9 @@ export const logout = asyncHandler(async (req, res) => {
   res.clearCookie('refreshToken');
   successResponse(res, null, 'Logged out successfully');
 });
+
+export const createEmployeeUser = asyncHandler(async (req, res) => {
+  const { name, email, password, mobile } = req.body;
+  const employee = await authService.createEmployeeUser({ name, email, password, mobile }, req.user);
+  successResponse(res, employee, 'Employee account created successfully', 201);
+});

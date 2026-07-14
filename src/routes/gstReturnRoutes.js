@@ -3,7 +3,7 @@ import {
   createReturn, getReturns, getReturnById, updateReturn,
   deleteReturn, getPendingReturns, getOverdueReturns, getMonthlyStats,
 } from '../controllers/gstReturnController.js';
-import { protect } from '../middleware/auth.js';
+import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createGSTReturnSchema, updateGSTReturnSchema } from '../validators/gstReturnValidator.js';
 
@@ -17,11 +17,11 @@ router.get('/stats/monthly', getMonthlyStats);
 
 router.route('/')
   .get(getReturns)
-  .post(validate(createGSTReturnSchema), createReturn);
+  .post(restrictTo('admin', 'superadmin'), validate(createGSTReturnSchema), createReturn);
 
 router.route('/:id')
   .get(getReturnById)
-  .put(validate(updateGSTReturnSchema), updateReturn)
-  .delete(deleteReturn);
+  .put(restrictTo('admin', 'superadmin'), validate(updateGSTReturnSchema), updateReturn)
+  .delete(restrictTo('admin', 'superadmin'), deleteReturn);
 
 export default router;

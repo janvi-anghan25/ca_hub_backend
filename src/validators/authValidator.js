@@ -15,7 +15,24 @@ export const registerSchema = z.object({
     .regex(/^[6-9]\d{9}$/, 'Invalid mobile number')
     .optional()
     .or(z.literal('')),
-  role: z.enum(['admin', 'employee']).optional(),
+  role: z.enum(['admin', 'superadmin']).optional(),
+});
+
+export const createEmployeeSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim(),
+  email: z.string().email('Invalid email address').toLowerCase(),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Must contain uppercase, lowercase and a number'
+    ),
+  mobile: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, 'Invalid mobile number')
+    .optional()
+    .or(z.literal('')),
 });
 
 export const loginSchema = z.object({
