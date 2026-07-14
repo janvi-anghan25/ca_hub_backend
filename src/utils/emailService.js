@@ -149,6 +149,56 @@ const emailService = {
     });
   },
 
+  async sendAdminInviteEmail(user, temporaryPassword, officeName) {
+    const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`;
+    const html = baseTemplate(
+      'Your CA Admin Account',
+      `
+      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>A Super Admin has created a CA Office Admin account for you${officeName ? ` at <strong>${officeName}</strong>` : ''}.</p>
+      <p>Use the temporary credentials below to sign in. You will be asked to set a new password immediately after login.</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+      <div class="token-box" style="letter-spacing:2px;font-size:18px;">${temporaryPassword}</div>
+      <p style="text-align:center;">
+        <a class="btn" href="${loginUrl}">Sign In</a>
+      </p>
+      <hr class="divider" />
+      <p class="note">🔒 For security, change this temporary password as soon as you sign in. Do not share it with anyone.</p>
+      `
+    );
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Your CA Admin Account — Temporary Password',
+      html,
+    });
+  },
+
+  async sendEmployeeInviteEmail(user, temporaryPassword, designation) {
+    const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`;
+    const roleLabel = designation ? ` (${designation})` : '';
+    const html = baseTemplate(
+      'Your CA Office Employee Account',
+      `
+      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Your CA office has created an employee account for you${roleLabel}.</p>
+      <p>Use these credentials to sign in. You will be asked to set a new password after your first login.</p>
+      <p><strong>Login ID (Email):</strong> ${user.email}</p>
+      <p><strong>Temporary Password:</strong></p>
+      <div class="token-box" style="letter-spacing:2px;font-size:18px;">${temporaryPassword}</div>
+      <p style="text-align:center;">
+        <a class="btn" href="${loginUrl}">Sign In</a>
+      </p>
+      <hr class="divider" />
+      <p class="note">🔒 Change this temporary password as soon as you sign in. Do not share it with anyone.</p>
+      `
+    );
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Your CA Office Login — Temporary Password',
+      html,
+    });
+  },
+
   async sendPasswordChangedEmail(user) {
     const html = baseTemplate(
       'Password Changed',

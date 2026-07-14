@@ -12,18 +12,18 @@ const router = Router();
 router.use(protect);
 
 // Employees can view invoices but cannot create/modify
-router.get('/overdue', restrictTo('admin', 'superadmin'), getOverdueInvoices);
-router.get('/stats/revenue', restrictTo('admin', 'superadmin'), getRevenueStats);
-router.get('/stats/monthly', restrictTo('admin', 'superadmin'), getMonthlyRevenue);
+router.get('/overdue', restrictTo('admin', 'employee', 'superadmin'), getOverdueInvoices);
+router.get('/stats/revenue', restrictTo('admin', 'employee', 'superadmin'), getRevenueStats);
+router.get('/stats/monthly', restrictTo('admin', 'employee', 'superadmin'), getMonthlyRevenue);
 
 router.route('/')
-  .get(restrictTo('admin', 'superadmin'), getInvoices)
-  .post(restrictTo('admin', 'superadmin'), validate(createInvoiceSchema), createInvoice);
+  .get(restrictTo('admin', 'employee', 'superadmin'), getInvoices)
+  .post(restrictTo('admin', 'employee', 'superadmin'), validate(createInvoiceSchema), createInvoice);
 
 router.route('/:id')
-  .get(restrictTo('admin', 'superadmin'), getInvoiceById)
-  .put(restrictTo('admin', 'superadmin'), updateInvoice);
+  .get(restrictTo('admin', 'employee', 'superadmin'), getInvoiceById)
+  .put(restrictTo('admin', 'employee', 'superadmin'), updateInvoice);
 
-router.post('/:id/payments', restrictTo('admin', 'superadmin'), validate(recordPaymentSchema), recordPayment);
+router.post('/:id/payments', restrictTo('admin', 'employee', 'superadmin'), validate(recordPaymentSchema), recordPayment);
 
 export default router;

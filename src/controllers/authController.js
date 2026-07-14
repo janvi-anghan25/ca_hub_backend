@@ -56,8 +56,8 @@ export const getProfile = asyncHandler(async (req, res) => {
 
 export const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  await authService.changePassword(req.user.id, currentPassword, newPassword);
-  successResponse(res, null, 'Password changed successfully');
+  const user = await authService.changePassword(req.user.id, currentPassword, newPassword);
+  successResponse(res, user, 'Password changed successfully');
 });
 
 export const logout = asyncHandler(async (req, res) => {

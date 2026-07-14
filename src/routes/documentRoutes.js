@@ -12,11 +12,11 @@ router.use(protect);
 
 router.route('/client/:clientId')
   .get(getDocuments)
-  .post(restrictTo('admin', 'superadmin'), uploadMiddleware, uploadDocument);
+  .post(restrictTo('admin', 'employee', 'superadmin'), uploadMiddleware, uploadDocument);
 
 router.route('/:id')
   .get(getDocumentById)
-  .put(restrictTo('admin', 'superadmin'), uploadMiddleware, updateDocumentVersion)
-  .delete(restrictTo('admin', 'superadmin'), deleteDocument);
+  .put(restrictTo('admin', 'employee', 'superadmin'), uploadMiddleware, updateDocumentVersion)
+  .delete(restrictTo('admin', 'employee', 'superadmin'), deleteDocument);
 
 export default router;

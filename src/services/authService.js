@@ -139,7 +139,12 @@ const authService = {
     const isValid = await freshUser.comparePassword(currentPassword);
     if (!isValid) throw new AppError('Current password is incorrect', 400, 'WRONG_PASSWORD');
 
+    if (currentPassword === newPassword) {
+      throw new AppError('New password must be different from the current password', 400, 'SAME_PASSWORD');
+    }
+
     freshUser.password = newPassword;
+    freshUser.mustChangePassword = false;
     await freshUser.save();
 
     emailService.sendPasswordChangedEmail(freshUser).catch((err) =>
@@ -147,6 +152,7 @@ const authService = {
     );
 
     logger.info(`Password changed for user: ${user.email}`);
+    return freshUser.toPublicJSON();
   },
 
   // ─── Create Employee User (by Admin) ─────────────────────────────────────────

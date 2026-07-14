@@ -1,9 +1,17 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
 import Office from '../models/Office.js';
 import Client from '../models/Client.js';
 import Employee from '../models/Employee.js';
 import AppError from '../utils/AppError.js';
 import logger from '../utils/logger.js';
+import emailService from '../utils/emailService.js';
+
+/** Temporary password satisfying complexity: upper, lower, digit, min 8 chars */
+const generateTemporaryPassword = () => {
+  const segment = crypto.randomBytes(6).toString('base64url').replace(/[^a-zA-Z0-9]/g, 'x').slice(0, 8);
+  return `Tmp${segment}1a`;
+};
 
 const superAdminService = {
   // ─── Offices ─────────────────────────────────────────────────────────────────
@@ -53,7 +61,6 @@ const superAdminService = {
     office.isActive = !office.isActive;
     await office.save();
 
-    // Also toggle the admin user's active status
     await User.findByIdAndUpdate(office.owner, { isActive: office.isActive });
 
     logger.info(`Super admin toggled office ${id} status to: ${office.isActive}`);
@@ -86,25 +93,65 @@ const superAdminService = {
     return { data, total };
   },
 
-  async createAdmin({ name, email, password, mobile, officeName, officeAddress }) {
+  async createAdmin({ name, email, mobile, officeName, officeAddress }) {
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
 
-    // Create office first
+    const temporaryPassword = generateTemporaryPassword();
+
     const office = new Office({
       name: officeName,
       address: officeAddress,
-      owner: null, // will be set after user creation
+      owner: null,
       isActive: true,
     });
 
-    const admin = new User({ name, email, password, mobile, role: 'admin' });
-    admin.office = office._id;
+    const admin = new User({
+      name,
+      email,
+      password: temporaryPassword,
+      mobile,
+      role: 'admin',
+      mustChangePassword: true,
+      office: office._id,
+    });
     office.owner = admin._id;
 
     await Promise.all([admin.save(), office.save()]);
-    logger.info(`Super admin created new admin: ${email} with office: ${officeName}`);
 
+    const rollbackAdmin = async () => {
+      await Promise.all([
+        User.findByIdAndDelete(admin._id),
+        Office.findByIdAndDelete(office._id),
+      ]);
+    };
+
+    try {
+      const emailResult = await emailService.sendAdminInviteEmail(admin, temporaryPassword, officeName);
+      if (emailResult?.skipped) {
+        if (process.env.NODE_ENV === 'production') {
+          await rollbackAdmin();
+          throw new AppError(
+            'Could not send invite email. Check SMTP configuration and try again.',
+            502,
+            'EMAIL_SEND_FAILED'
+          );
+        }
+        // Local/dev: account stays, temp password logged so testing can continue without SMTP
+        logger.warn(`[DEV] SMTP skipped — temporary password for ${email}: ${temporaryPassword}`);
+      }
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      await rollbackAdmin();
+      logger.error(`Admin invite email failed for ${email}:`, err.message);
+      throw new AppError(
+        'Could not send invite email. Check SMTP configuration and try again.',
+        502,
+        'EMAIL_SEND_FAILED'
+      );
+    }
+
+    logger.info(`Super admin created new admin: ${email} with office: ${officeName}`);
     return { user: admin.toPublicJSON(), office };
   },
 

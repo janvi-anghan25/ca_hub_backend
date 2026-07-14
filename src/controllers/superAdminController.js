@@ -46,11 +46,16 @@ export const getAllAdmins = asyncHandler(async (req, res) => {
 });
 
 export const createAdmin = asyncHandler(async (req, res) => {
-  const { name, email, password, mobile, officeName, officeAddress } = req.body;
+  const { name, email, mobile, officeName, officeAddress } = req.body;
   const result = await superAdminService.createAdmin({
-    name, email, password, mobile, officeName, officeAddress,
+    name, email, mobile, officeName, officeAddress,
   });
-  successResponse(res, result, 'Admin and office created successfully', 201);
+  successResponse(
+    res,
+    result,
+    'Admin created successfully. A temporary password has been sent to their email.',
+    201
+  );
 });
 
 export const toggleAdminStatus = asyncHandler(async (req, res) => {

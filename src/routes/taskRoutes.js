@@ -17,8 +17,8 @@ router.get('/:id', getTaskById);
 router.post('/:id/comments', addComment);
 
 // Only admin/superadmin can create, update, delete tasks
-router.post('/', restrictTo('admin', 'superadmin'), createTask);
-router.put('/:id', restrictTo('admin', 'superadmin'), updateTask);
-router.delete('/:id', restrictTo('admin', 'superadmin'), deleteTask);
+router.post('/', restrictTo('admin', 'employee', 'superadmin'), createTask);
+router.put('/:id', restrictTo('admin', 'employee', 'superadmin'), updateTask);
+router.delete('/:id', restrictTo('admin', 'employee', 'superadmin'), deleteTask);
 
 export default router;

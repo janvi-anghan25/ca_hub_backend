@@ -17,11 +17,11 @@ router.get('/stats/monthly', getMonthlyStats);
 
 router.route('/')
   .get(getReturns)
-  .post(restrictTo('admin', 'superadmin'), validate(createGSTReturnSchema), createReturn);
+  .post(restrictTo('admin', 'employee', 'superadmin'), validate(createGSTReturnSchema), createReturn);
 
 router.route('/:id')
   .get(getReturnById)
-  .put(restrictTo('admin', 'superadmin'), validate(updateGSTReturnSchema), updateReturn)
-  .delete(restrictTo('admin', 'superadmin'), deleteReturn);
+  .put(restrictTo('admin', 'employee', 'superadmin'), validate(updateGSTReturnSchema), updateReturn)
+  .delete(restrictTo('admin', 'employee', 'superadmin'), deleteReturn);
 
 export default router;

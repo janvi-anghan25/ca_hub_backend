@@ -22,7 +22,7 @@ const employeeSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     name: { type: String, required: true, trim: true },
     mobile: { type: String, required: true, trim: true },
-    email: { type: String, lowercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     designation: { type: String, trim: true },
     department: { type: String, trim: true },
     joiningDate: { type: Date },

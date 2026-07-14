@@ -15,13 +15,13 @@ router.use(protect);
 router.get('/stats', getClientStats);
 router.route('/')
   .get(getClients)
-  .post(restrictTo('admin', 'superadmin'), validate(createClientSchema), createClient);
+  .post(restrictTo('admin', 'employee', 'superadmin'), validate(createClientSchema), createClient);
 
 router.route('/:id')
   .get(getClientById)
-  .put(restrictTo('admin', 'superadmin'), validate(updateClientSchema), updateClient)
-  .delete(restrictTo('admin', 'superadmin'), deleteClient);
+  .put(restrictTo('admin', 'employee', 'superadmin'), validate(updateClientSchema), updateClient)
+  .delete(restrictTo('admin', 'employee', 'superadmin'), deleteClient);
 
-router.post('/:id/photo', restrictTo('admin', 'superadmin'), uploadPhoto, uploadClientPhoto);
+router.post('/:id/photo', restrictTo('admin', 'employee', 'superadmin'), uploadPhoto, uploadClientPhoto);
 
 export default router;

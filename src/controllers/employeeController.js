@@ -3,13 +3,22 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { successResponse, paginatedResponse } from '../utils/apiResponse.js';
 
 export const createEmployee = asyncHandler(async (req, res) => {
-  const employee = await employeeService.createEmployee(req.body, req.user.id, req.user.office);
-  successResponse(res, employee, 'Employee created', 201);
+  const result = await employeeService.createEmployee(req.body, req.user);
+  successResponse(
+    res,
+    result,
+    'Employee created. Login ID and temporary password have been sent to their email.',
+    201
+  );
 });
 
 export const getEmployees = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-  const { data, total } = await employeeService.getEmployees(req.user.office, Number(page), Number(limit));
+  const { data, total } = await employeeService.getEmployees(
+    req.user.office,
+    Number(page),
+    Number(limit)
+  );
   paginatedResponse(res, data, total, page, limit, 'Employees fetched');
 });
 

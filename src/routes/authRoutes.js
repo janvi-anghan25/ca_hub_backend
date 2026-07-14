@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
-  register,
   login,
   refreshToken,
   forgotPassword,
@@ -14,7 +13,6 @@ import {
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
-  registerSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -38,7 +36,15 @@ const sensitiveActionLimiter = rateLimit({
 });
 
 // ─── Public routes ────────────────────────────────────────────────────────────
-router.post('/register', sensitiveActionLimiter, validate(registerSchema), register);
+// Public self-registration is disabled. Admins are created by Super Admin only.
+router.post('/register', (_req, res) => {
+  res.status(403).json({
+    success: false,
+    message: 'Public registration is disabled. Contact your Super Admin to get an account.',
+    errorCode: 'REGISTRATION_DISABLED',
+  });
+});
+
 router.post('/login', sensitiveActionLimiter, validate(loginSchema), login);
 router.post('/refresh-token', refreshToken);
 

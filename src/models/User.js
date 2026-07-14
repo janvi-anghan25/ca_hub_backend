@@ -21,6 +21,8 @@ const userSchema = new mongoose.Schema(
     mobile: { type: String, trim: true },
     avatar: { type: String },
     isActive: { type: Boolean, default: true },
+    /** True when account was created with a temporary password — user must set a new one after login */
+    mustChangePassword: { type: Boolean, default: false },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
     lastLogin: { type: Date },

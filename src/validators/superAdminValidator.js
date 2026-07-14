@@ -3,10 +3,6 @@ import { z } from 'zod';
 export const createAdminSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim(),
   email: z.string().email('Invalid email address').toLowerCase(),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Must contain uppercase, lowercase and a number'),
   mobile: z
     .string()
     .regex(/^[6-9]\d{9}$/, 'Invalid mobile number')
