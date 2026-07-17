@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import {
   createReturn, getReturns, getReturnById, updateReturn,
-  deleteReturn, getPendingReturns, getOverdueReturns, getMonthlyStats,
+  deleteReturn, getPendingReturns, getOverdueReturns, getMonthlyStats, importReturns,
 } from '../controllers/gstReturnController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { uploadImport } from '../middleware/upload.js';
 import { createGSTReturnSchema, updateGSTReturnSchema } from '../validators/gstReturnValidator.js';
 
 const router = Router();
@@ -14,6 +15,7 @@ router.use(protect);
 router.get('/pending', getPendingReturns);
 router.get('/overdue', getOverdueReturns);
 router.get('/stats/monthly', getMonthlyStats);
+router.post('/import', restrictTo('admin', 'employee', 'superadmin'), uploadImport, importReturns);
 
 router.route('/')
   .get(getReturns)

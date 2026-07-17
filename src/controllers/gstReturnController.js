@@ -1,10 +1,17 @@
 import gstReturnService from '../services/gstReturnService.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import AppError from '../utils/AppError.js';
 import { successResponse, paginatedResponse } from '../utils/apiResponse.js';
 
 export const createReturn = asyncHandler(async (req, res) => {
   const gstReturn = await gstReturnService.createReturn(req.body, req.user.id, req.user.office);
   successResponse(res, gstReturn, 'GST Return created', 201);
+});
+
+export const importReturns = asyncHandler(async (req, res) => {
+  if (!req.file) throw new AppError('No file uploaded. Attach a .xlsx or .csv file.', 400, 'NO_FILE');
+  const summary = await gstReturnService.importReturns(req.file.buffer, req.user.id, req.user.office);
+  successResponse(res, summary, 'GST import processed', 200);
 });
 
 export const getReturns = asyncHandler(async (req, res) => {

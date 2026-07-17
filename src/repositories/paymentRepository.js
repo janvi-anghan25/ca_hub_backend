@@ -15,6 +15,41 @@ class PaymentRepository extends BaseRepository {
     });
   }
 
+  async getPaymentsByOffice(officeId, filters = {}, page = 1, limit = 15) {
+    return this.find(
+      { office: officeId, ...filters },
+      {
+        page,
+        limit,
+        sort: { paymentDate: -1, createdAt: -1 },
+        populate: [
+          { path: 'client', select: 'clientName firmName' },
+          { path: 'invoice', select: 'invoiceNumber totalAmount' },
+        ],
+      }
+    );
+  }
+
+  /**
+   * Next sequential receipt number scoped to an office, e.g. RCP-0001.
+   * Only considers documents where receiptNumber is a real string so legacy
+   * null rows are ignored.
+   */
+  async getNextReceiptNumber(officeId, prefix = 'RCP') {
+    const latest = await Payment.findOne({
+      office: officeId,
+      receiptNumber: { $type: 'string' },
+    })
+      .sort({ createdAt: -1 })
+      .select('receiptNumber')
+      .lean();
+
+    if (!latest?.receiptNumber) return `${prefix}-0001`;
+
+    const num = parseInt(latest.receiptNumber.split('-').pop(), 10) || 0;
+    return `${prefix}-${String(num + 1).padStart(4, '0')}`;
+  }
+
   async getMonthlyCollection(officeId, year) {
     return Payment.aggregate([
       {

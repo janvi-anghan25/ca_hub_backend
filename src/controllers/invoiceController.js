@@ -35,6 +35,21 @@ export const recordPayment = asyncHandler(async (req, res) => {
   successResponse(res, payment, 'Payment recorded', 201);
 });
 
+export const getPayments = asyncHandler(async (req, res) => {
+  const { paymentMode, client, page = 1, limit = 15 } = req.query;
+  const filters = {};
+  if (paymentMode) filters.paymentMode = paymentMode;
+  if (client) filters.client = client;
+
+  const { data, total } = await invoiceService.getPayments(
+    req.user.office,
+    filters,
+    Number(page),
+    Number(limit)
+  );
+  paginatedResponse(res, data, total, page, limit, 'Payments fetched');
+});
+
 export const getRevenueStats = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.query;
   const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);

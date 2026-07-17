@@ -43,3 +43,28 @@ export const uploadPhoto = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: fileFilter(['image/jpeg', 'image/png', 'image/webp']),
 }).single('photo');
+
+// Spreadsheet imports are parsed from memory (never persisted to disk).
+const importFileFilter = (req, file, cb) => {
+  const allowedMimes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-excel', // .xls / some .csv
+    'text/csv',
+    'application/csv',
+    'text/plain', // some browsers send this for .csv
+    'application/octet-stream', // fallback for .xlsx/.csv
+  ];
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExt = ['.xlsx', '.xls', '.csv'];
+  if (allowedMimes.includes(file.mimetype) || allowedExt.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new AppError('Only .xlsx, .xls or .csv files are allowed', 400, 'INVALID_FILE_TYPE'), false);
+  }
+};
+
+export const uploadImport = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: importFileFilter,
+}).single('file');

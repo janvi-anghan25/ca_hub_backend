@@ -32,12 +32,18 @@ class ClientRepository extends BaseRepository {
     return { data, total };
   }
 
-  async findByGST(gstNumber) {
-    return Client.findOne({ gstNumber: gstNumber.toUpperCase() }).lean();
+  async findByGST(gstNumber, officeId, excludeId) {
+    const filter = { gstNumber: gstNumber.toUpperCase() };
+    if (officeId) filter.office = officeId;
+    if (excludeId) filter._id = { $ne: excludeId };
+    return Client.findOne(filter).lean();
   }
 
-  async findByPAN(panNumber) {
-    return Client.findOne({ panNumber: panNumber.toUpperCase() }).lean();
+  async findByPAN(panNumber, officeId, excludeId) {
+    const filter = { panNumber: panNumber.toUpperCase() };
+    if (officeId) filter.office = officeId;
+    if (excludeId) filter._id = { $ne: excludeId };
+    return Client.findOne(filter).lean();
   }
 
   async getClientStats(officeId) {

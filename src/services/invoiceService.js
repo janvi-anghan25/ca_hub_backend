@@ -87,8 +87,11 @@ const invoiceService = {
       throw new AppError('Payment amount exceeds balance due', 400, 'EXCESS_PAYMENT');
     }
 
+    const receiptNumber = await paymentRepository.getNextReceiptNumber(officeId);
+
     const payment = await paymentRepository.create({
       ...paymentData,
+      receiptNumber,
       client: invoice.client,
       invoice: invoiceId,
       createdBy: userId,
@@ -99,6 +102,10 @@ const invoiceService = {
     await invoice.save();
 
     return payment;
+  },
+
+  async getPayments(officeId, filters, page, limit) {
+    return paymentRepository.getPaymentsByOffice(officeId, filters, page, limit);
   },
 
   async getRevenueStats(officeId, startDate, endDate) {

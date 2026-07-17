@@ -15,7 +15,7 @@ const paymentSchema = new mongoose.Schema(
     bankName: { type: String, trim: true },
     chequeNumber: { type: String, trim: true },
     notes: { type: String, trim: true },
-    receiptNumber: { type: String, unique: true, trim: true },
+    receiptNumber: { type: String, trim: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     office: { type: mongoose.Schema.Types.ObjectId, ref: 'Office' },
   },
@@ -25,6 +25,13 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ client: 1, paymentDate: -1 });
 paymentSchema.index({ invoice: 1 });
 paymentSchema.index({ paymentDate: -1 });
+// Receipt numbers are sequential per office. The partial filter keeps the
+// uniqueness constraint from tripping on legacy documents where receiptNumber
+// was never set (null), while still guaranteeing uniqueness within an office.
+paymentSchema.index(
+  { office: 1, receiptNumber: 1 },
+  { unique: true, partialFilterExpression: { receiptNumber: { $type: 'string' } } }
+);
 
 const Payment = mongoose.model('Payment', paymentSchema);
 export default Payment;

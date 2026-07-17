@@ -28,7 +28,9 @@ export const createClientSchema = z.object({
   address: addressSchema,
   businessType: z.enum(['Proprietorship', 'Partnership', 'LLP', 'Private Limited', 'Public Limited', 'Trust', 'HUF', 'Other']),
   state: z.string().optional(),
-  category: z.array(z.enum(['GST', 'ITR', 'Company', 'LLP', 'Partnership', 'Audit', 'Other'])).optional(),
+  category: z
+    .array(z.enum(['GST', 'ITR', 'Company', 'LLP', 'Partnership', 'Audit', 'Other']))
+    .min(1, 'Select at least one service'),
   assignedEmployee: z.string().optional(),
   status: z.enum(['Active', 'Inactive']).optional(),
   tags: z.array(z.string()).optional(),

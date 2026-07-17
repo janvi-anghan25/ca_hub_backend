@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   createInvoice, getInvoices, getInvoiceById, updateInvoice,
-  recordPayment, getRevenueStats, getMonthlyRevenue, getOverdueInvoices,
+  recordPayment, getPayments, getRevenueStats, getMonthlyRevenue, getOverdueInvoices,
 } from '../controllers/invoiceController.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -13,6 +13,7 @@ router.use(protect);
 
 // Employees can view invoices but cannot create/modify
 router.get('/overdue', restrictTo('admin', 'employee', 'superadmin'), getOverdueInvoices);
+router.get('/payments', restrictTo('admin', 'employee', 'superadmin'), getPayments);
 router.get('/stats/revenue', restrictTo('admin', 'employee', 'superadmin'), getRevenueStats);
 router.get('/stats/monthly', restrictTo('admin', 'employee', 'superadmin'), getMonthlyRevenue);
 

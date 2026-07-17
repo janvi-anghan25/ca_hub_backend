@@ -24,7 +24,7 @@ export const getClientById = asyncHandler(async (req, res) => {
 });
 
 export const updateClient = asyncHandler(async (req, res) => {
-  const client = await clientService.updateClient(req.params.id, req.body);
+  const client = await clientService.updateClient(req.params.id, req.body, req.user.office);
   successResponse(res, client, 'Client updated');
 });
 

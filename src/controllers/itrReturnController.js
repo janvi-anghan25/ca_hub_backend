@@ -1,10 +1,17 @@
 import itrReturnService from '../services/itrReturnService.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import AppError from '../utils/AppError.js';
 import { successResponse, paginatedResponse } from '../utils/apiResponse.js';
 
 export const createReturn = asyncHandler(async (req, res) => {
   const itrReturn = await itrReturnService.createReturn(req.body, req.user.id, req.user.office);
   successResponse(res, itrReturn, 'ITR created', 201);
+});
+
+export const importReturns = asyncHandler(async (req, res) => {
+  if (!req.file) throw new AppError('No file uploaded. Attach a .xlsx or .csv file.', 400, 'NO_FILE');
+  const summary = await itrReturnService.importReturns(req.file.buffer, req.user.id, req.user.office);
+  successResponse(res, summary, 'ITR import processed', 200);
 });
 
 export const getReturns = asyncHandler(async (req, res) => {
