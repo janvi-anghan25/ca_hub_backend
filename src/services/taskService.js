@@ -22,7 +22,14 @@ const taskService = {
   },
 
   async getTasks(officeId, filters, page, limit) {
-    const filter = { office: officeId, ...filters };
+    const { search, ...restFilters } = filters;
+    const filter = { office: officeId, ...restFilters };
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
     return taskRepository.find(filter, {
       page,
       limit,
@@ -41,7 +48,7 @@ const taskService = {
         { path: 'client', select: 'clientName firmName' },
         { path: 'assignedTo', select: 'name mobile email' },
         { path: 'assignedBy', select: 'name' },
-        { path: 'comments.user', select: 'name' },
+        { path: 'comments.user', select: 'name avatar' },
       ],
     });
     if (!task) throw new AppError('Task not found', 404, 'TASK_NOT_FOUND');
@@ -64,7 +71,21 @@ const taskService = {
       { new: true, runValidators: false }
     );
     if (!task) throw new AppError('Task not found', 404, 'TASK_NOT_FOUND');
-    return task;
+    return taskService.getTaskById(taskId);
+  },
+
+  async toggleSubtask(taskId, subtaskId) {
+    const task = await taskRepository.findById(taskId);
+    if (!task) throw new AppError('Task not found', 404, 'TASK_NOT_FOUND');
+
+    const subtask = task.subtasks.id(subtaskId);
+    if (!subtask) throw new AppError('Subtask not found', 404, 'SUBTASK_NOT_FOUND');
+
+    subtask.isCompleted = !subtask.isCompleted;
+    subtask.completedAt = subtask.isCompleted ? new Date() : undefined;
+
+    await task.save();
+    return taskService.getTaskById(taskId);
   },
 
   async getTodaysTasks(officeId) {

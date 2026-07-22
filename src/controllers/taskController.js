@@ -8,13 +8,14 @@ export const createTask = asyncHandler(async (req, res) => {
 });
 
 export const getTasks = asyncHandler(async (req, res) => {
-  const { status, priority, category, assignedTo, client, page = 1, limit = 10 } = req.query;
+  const { status, priority, category, assignedTo, client, search, page = 1, limit = 50 } = req.query;
   const filters = {};
   if (status) filters.status = status;
   if (priority) filters.priority = priority;
   if (category) filters.category = category;
   if (assignedTo) filters.assignedTo = assignedTo;
   if (client) filters.client = client;
+  if (search) filters.search = search;
 
   const { data, total } = await taskService.getTasks(req.user.office, filters, Number(page), Number(limit));
   paginatedResponse(res, data, total, page, limit, 'Tasks fetched');
@@ -34,6 +35,11 @@ export const addComment = asyncHandler(async (req, res) => {
   const { text } = req.body;
   const task = await taskService.addComment(req.params.id, req.user.id, text);
   successResponse(res, task, 'Comment added');
+});
+
+export const toggleSubtask = asyncHandler(async (req, res) => {
+  const task = await taskService.toggleSubtask(req.params.id, req.params.subtaskId);
+  successResponse(res, task, 'Subtask status toggled');
 });
 
 export const getTodaysTasks = asyncHandler(async (req, res) => {

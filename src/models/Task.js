@@ -28,6 +28,13 @@ const taskSchema = new mongoose.Schema(
     actualHours: { type: Number },
     tags: [{ type: String, trim: true }],
     attachments: [{ type: String }],
+    subtasks: [
+      {
+        title: { type: String, required: true, trim: true },
+        isCompleted: { type: Boolean, default: false },
+        completedAt: { type: Date },
+      },
+    ],
     comments: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -44,6 +51,7 @@ taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ client: 1 });
 taskSchema.index({ dueDate: 1, status: 1 });
 taskSchema.index({ priority: 1, status: 1 });
+taskSchema.index({ title: 'text', description: 'text' });
 
 const Task = mongoose.model('Task', taskSchema);
 export default Task;
