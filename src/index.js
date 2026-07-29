@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -14,6 +15,7 @@ import connectDB from './config/database.js';
 import errorHandler from './middleware/errorHandler.js';
 import logger from './utils/logger.js';
 import { initScheduler } from './jobs/reminderScheduler.js';
+import { initSocket } from './socket/socketServer.js';
 
 import authRoutes from './routes/authRoutes.js';
 import clientRoutes from './routes/clientRoutes.js';
@@ -31,6 +33,7 @@ import settingsRoutes from './routes/settingsRoutes.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+const httpServer = createServer(app);
 
 // Ensure uploads and logs directories exist
 const uploadsDir = path.join(
@@ -136,7 +139,8 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
-  app.listen(PORT, () => {
+  initSocket(httpServer);
+  httpServer.listen(PORT, () => {
     logger.info(
       `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
     );
