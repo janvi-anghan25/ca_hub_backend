@@ -1,54 +1,206 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import logger from './logger.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logoPath = path.join(__dirname, '../assets/ca-logo-dark.png');
+
+let resendClient = null;
+const getResendClient = () => {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+};
+
 const createTransporter = () => {
+  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
+  const isSecure = port === 465 || process.env.SMTP_SECURE === 'true';
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10) || 587,
-    secure: process.env.SMTP_PORT === '465',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port,
+    secure: isSecure,
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      pass: process.env.SMTP_PASS?.replace(/\s+/g, ''), // strip accidental spaces in 16-char app passwords
+    },
+    tls: {
+      rejectUnauthorized: false,
     },
   });
 };
 
 const baseTemplate = (title, content) => `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <style>
-    body { font-family: Inter, Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
-    .wrapper { max-width: 560px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
-    .header { background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 32px 40px; text-align: center; }
-    .header h1 { color: #fff; font-size: 22px; margin: 0; font-weight: 700; letter-spacing: -0.3px; }
-    .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin: 6px 0 0; }
-    .body { padding: 36px 40px; }
-    .body p { color: #374151; font-size: 14px; line-height: 1.7; margin: 0 0 16px; }
-    .btn { display: inline-block; background: #2563eb; color: #fff !important; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 14px; margin: 8px 0 20px; }
-    .btn:hover { background: #1d4ed8; }
-    .token-box { background: #f0f9ff; border: 1px dashed #93c5fd; border-radius: 10px; padding: 14px 20px; text-align: center; font-size: 28px; font-weight: 800; letter-spacing: 8px; color: #1d4ed8; margin: 20px 0; }
-    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
-    .note { color: #9ca3af !important; font-size: 12px !important; }
-    .footer { background: #f9fafb; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb; }
-    .footer p { color: #9ca3af; font-size: 12px; margin: 0; }
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F4F7F5;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .email-container {
+      max-width: 580px;
+      margin: 32px auto;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #D5E3DE;
+      box-shadow: 0 8px 24px rgba(15, 47, 42, 0.06);
+    }
+    .header {
+      background: linear-gradient(135deg, #0A221E 0%, #0F2F2A 60%, #1A4A42 100%);
+      padding: 28px 24px 24px;
+      text-align: center;
+      border-bottom: 3px solid #C4A574;
+    }
+    .body {
+      padding: 36px 36px 30px;
+      color: #1A2E2A;
+    }
+    .body h2 {
+      font-size: 21px;
+      font-weight: 700;
+      color: #0F2F2A;
+      margin: 0 0 20px;
+      letter-spacing: -0.3px;
+    }
+    .body p {
+      color: #3D5A54;
+      font-size: 14px;
+      line-height: 1.7;
+      margin: 0 0 16px;
+    }
+    .btn-container {
+      text-align: center;
+      margin: 28px 0;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0F2F2A 0%, #1A4A42 100%);
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 14px 34px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+      border: 1px solid #C4A574;
+      box-shadow: 0 4px 14px rgba(15, 47, 42, 0.2);
+    }
+    .token-box {
+      background: #F4F7F5;
+      border: 2px dashed #C4A574;
+      border-radius: 12px;
+      padding: 18px 24px;
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 10px;
+      color: #0F2F2A;
+      margin: 24px 0;
+      font-family: 'IBM Plex Mono', Courier, monospace;
+    }
+    .info-card {
+      background: #F4F7F5;
+      border: 1px solid #D5E3DE;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 20px 0;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #E8EFEB;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      color: #5A7A72;
+      font-weight: 500;
+    }
+    .info-value {
+      color: #0F2F2A;
+      font-weight: 600;
+      font-family: 'IBM Plex Mono', Courier, monospace;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #E8EFEB;
+      margin: 24px 0;
+    }
+    .note {
+      color: #5A7A72 !important;
+      font-size: 12.5px !important;
+      line-height: 1.6;
+    }
+    .footer {
+      background: #0A221E;
+      padding: 20px 32px;
+      text-align: center;
+      border-top: 1px solid #1A4A42;
+    }
+    .footer p {
+      color: #A8C5BE;
+      font-size: 12px;
+      margin: 0;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="header">
-      <h1>CA Management</h1>
-      <p>Office Management System</p>
+  <div class="email-container">
+    <div class="header" style="background: linear-gradient(135deg, #0A221E 0%, #0F2F2A 60%, #1A4A42 100%); padding: 28px 24px 24px; text-align: center; border-bottom: 3px solid #C4A574;">
+      <!-- Seamless Brand Logo Table (Zero white background artifact) -->
+      <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+        <tr>
+          <!-- Left Emblem Badge -->
+          <td valign="middle" style="padding-right: 14px; text-align: center;">
+            <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+              <tr>
+                <td align="center" valign="middle" style="width: 50px; height: 50px; background: #0A221E; border: 2px solid #C4A574; border-radius: 12px; text-align: center; vertical-align: middle;">
+                  <span style="font-family: Arial, Helvetica, sans-serif; font-weight: 900; font-size: 21px; color: #FFFFFF; letter-spacing: -0.5px; line-height: 1; display: inline-block;">
+                    CA<span style="color: #C4A574; font-size: 17px; margin-left: 2px;">&#10003;</span>
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+
+          <!-- Right Brand Typography -->
+          <td valign="middle" align="left" style="text-align: left;">
+            <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: bold; color: #FFFFFF; line-height: 1.1; margin: 0; padding: 0;">
+              CA <span style="color: #C4A574;">Hub</span>
+            </div>
+            <div style="height: 2px; background: #C4A574; margin: 5px 0 5px; width: 185px; font-size: 1px; line-height: 1px;">&nbsp;</div>
+            <div style="font-family: Arial, Helvetica, sans-serif; font-size: 9.5px; font-weight: bold; color: #A8C5BE; letter-spacing: 3px; text-transform: uppercase; margin: 0; padding: 0; line-height: 1;">
+              CHARTERED ACCOUNTANTS
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
+    
     <div class="body">
       ${content}
     </div>
+    
     <div class="footer">
-      <p>© ${new Date().getFullYear()} CA Management System. All rights reserved.</p>
-      <p style="margin-top:4px;">This is an automated email. Please do not reply.</p>
+      <p>© ${new Date().getFullYear()} CA Hub Practice Management System.</p>
     </div>
   </div>
 </body>
@@ -57,94 +209,160 @@ const baseTemplate = (title, content) => `
 
 const emailService = {
   async sendEmail({ to, subject, html }) {
-    const isConfigured =
+    const fromName = process.env.EMAIL_FROM_NAME || 'CA Hub';
+    const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'onboarding@resend.dev';
+    const formattedFrom = `"${fromName}" <${fromEmail}>`;
+
+    const attachments = [];
+    if (fs.existsSync(logoPath)) {
+      attachments.push({
+        filename: 'ca-logo.png',
+        path: logoPath,
+        cid: 'calogo@brand',
+      });
+    }
+
+    // 1. Resend API Priority (if RESEND_API_KEY is configured)
+    if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 'your_resend_api_key') {
+      try {
+        const resend = getResendClient();
+        const resendAttachments = [];
+        if (fs.existsSync(logoPath)) {
+          resendAttachments.push({
+            filename: 'ca-logo.png',
+            content: fs.readFileSync(logoPath),
+          });
+        }
+
+        const { data, error } = await resend.emails.send({
+          from: formattedFrom,
+          to: Array.isArray(to) ? to : [to],
+          subject,
+          html,
+          attachments: resendAttachments.length ? resendAttachments : undefined,
+        });
+
+        if (error) {
+          logger.error(`[Resend Email] Failed to send to ${to}:`, error.message);
+          throw error;
+        }
+
+        logger.info(`[Resend Email] Successfully sent to ${to}: "${subject}" (id: ${data?.id})`);
+        return data;
+      } catch (error) {
+        logger.error(`[Resend Email] Error sending to ${to}:`, error.message);
+        throw error;
+      }
+    }
+
+    // 2. SMTP Priority / Fallback (Gmail, etc.)
+    const isSmtpConfigured =
       process.env.SMTP_USER &&
       process.env.SMTP_PASS &&
       process.env.SMTP_USER !== 'your@email.com';
 
-    if (!isConfigured) {
-      logger.warn(`[Email] SMTP not configured — skipped email to ${to}: "${subject}"`);
+    if (!isSmtpConfigured) {
+      logger.warn(`[Email] Neither RESEND_API_KEY nor SMTP configured — skipped email to ${to}: "${subject}"`);
       return { skipped: true };
     }
 
     try {
       const transporter = createTransporter();
       const info = await transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME || 'CA Management'}" <${process.env.EMAIL_FROM}>`,
+        from: formattedFrom,
         to,
         subject,
         html,
+        attachments,
       });
-      logger.info(`[Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
+      logger.info(`[SMTP Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
       return info;
     } catch (error) {
-      logger.error(`[Email] Failed to send to ${to}:`, error.message);
+      logger.error(`[SMTP Email] Failed to send to ${to}:`, error.message);
       throw error;
     }
   },
 
   async sendWelcomeEmail(user) {
     const html = baseTemplate(
-      'Welcome to CA Management',
+      'Welcome to CA Hub',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>Welcome to <strong>CA Management System</strong>! Your account has been created successfully.</p>
-      <p>You can now log in and start managing your CA office workflows efficiently.</p>
-      <p style="text-align:center;">
-        <a class="btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login">Sign In to Your Account</a>
-      </p>
-      <hr class="divider" />
-      <p><strong>Your account details:</strong></p>
-      <p>Email: <strong>${user.email}</strong><br/>Role: <strong>${user.role}</strong></p>
-      <p class="note">If you did not create this account, please contact your administrator immediately.</p>
+      <h2>Welcome, ${user.name}!</h2>
+      <p>Your <strong>CA Hub</strong> account has been successfully created. You can now access your practice dashboard to streamline your client workflows, tasks, GST/ITR compliances, and billing.</p>
+      
+      <div class="btn-container">
+        <a class="btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login">Sign In to CA Hub</a>
+      </div>
+
+      <div class="info-card">
+        <table width="100%" cellpadding="4" cellspacing="0">
+          <tr>
+            <td class="info-label">Account Email:</td>
+            <td class="info-value" align="right">${user.email}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Assigned Role:</td>
+            <td class="info-value" align="right">${user.role}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="note">If you did not initiate this account creation, please notify your office administrator immediately.</p>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Welcome to CA Management System',
+      subject: 'Welcome to CA Hub Practice Management',
       html,
     });
   },
 
   async sendPasswordResetEmail(user, resetToken, resetUrl) {
     const html = baseTemplate(
-      'Password Reset Request',
+      'Reset Your CA Hub Password',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>We received a request to reset your password. Click the button below to set a new password:</p>
-      <p style="text-align:center;">
-        <a class="btn" href="${resetUrl}">Reset My Password</a>
+      <h2>Password Reset Request</h2>
+      <p>Hello <strong>${user.name}</strong>,</p>
+      <p>We received a request to reset your password for your <strong>CA Hub</strong> account. Click the button below to choose a new password:</p>
+      
+      <div class="btn-container">
+        <a class="btn" href="${resetUrl}">Reset Password</a>
+      </div>
+
+      <p class="note" style="text-align: center;">Or copy and paste this link into your browser:<br/>
+        <span style="color:#0F2F2A;font-weight:600;font-size:11px;word-break:break-all;">${resetUrl}</span>
       </p>
-      <p class="note" style="text-align:center;">Or copy and paste this link in your browser:<br/>
-        <span style="color:#2563eb;font-size:11px;word-break:break-all;">${resetUrl}</span>
-      </p>
+
       <hr class="divider" />
-      <p class="note">⏱ This link expires in <strong>10 minutes</strong>.</p>
-      <p class="note">🔒 If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+      <p class="note">⏱ <strong>Notice:</strong> This reset link will expire in <strong>10 minutes</strong>.</p>
+      <p class="note">🔒 If you did not request this, you can safely ignore this email — your credentials remain secure.</p>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Password Reset — CA Management',
+      subject: 'Password Reset Request — CA Hub',
       html,
     });
   },
 
   async sendPasswordResetOTPEmail(user, otp) {
     const html = baseTemplate(
-      'Password Reset OTP',
+      'Password Reset OTP — CA Hub',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>Use the OTP below to reset your CA Management password:</p>
+      <h2>Password Reset OTP</h2>
+      <p>Hello <strong>${user.name}</strong>,</p>
+      <p>Use the secure one-time verification code below to reset your CA Hub account password:</p>
+      
       <div class="token-box">${otp}</div>
-      <p class="note" style="text-align:center;">⏱ This OTP expires in <strong>10 minutes</strong>.</p>
+
+      <p class="note" style="text-align: center;">⏱ This verification code is valid for <strong>10 minutes</strong>.</p>
       <hr class="divider" />
-      <p class="note">🔒 If you did not request this, please ignore this email. Your account is still secure.</p>
+      <p class="note">🔒 <strong>Security Warning:</strong> Never share this code with anyone. CA Hub support will never ask for your OTP.</p>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Password Reset OTP — CA Management',
+      subject: 'Your Password Reset OTP — CA Hub',
       html,
     });
   },
@@ -152,23 +370,37 @@ const emailService = {
   async sendAdminInviteEmail(user, temporaryPassword, officeName) {
     const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`;
     const html = baseTemplate(
-      'Your CA Admin Account',
+      'Your CA Office Admin Account',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>A Super Admin has created a CA Office Admin account for you${officeName ? ` at <strong>${officeName}</strong>` : ''}.</p>
-      <p>Use the temporary credentials below to sign in. You will be asked to set a new password immediately after login.</p>
-      <p><strong>Email:</strong> ${user.email}</p>
-      <div class="token-box" style="letter-spacing:2px;font-size:18px;">${temporaryPassword}</div>
-      <p style="text-align:center;">
-        <a class="btn" href="${loginUrl}">Sign In</a>
-      </p>
+      <h2>Administrator Invitation</h2>
+      <p>Hello <strong>${user.name}</strong>,</p>
+      <p>A Super Admin has set up a CA Office Admin account for you${officeName ? ` at <strong>${officeName}</strong>` : ''}.</p>
+      <p>Here are your temporary login credentials:</p>
+      
+      <div class="info-card">
+        <table width="100%" cellpadding="4" cellspacing="0">
+          <tr>
+            <td class="info-label">Login Email:</td>
+            <td class="info-value" align="right">${user.email}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Temporary Password:</td>
+            <td class="info-value" align="right" style="color:#C4A574;font-size:15px;">${temporaryPassword}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="btn-container">
+        <a class="btn" href="${loginUrl}">Log In to CA Hub</a>
+      </div>
+
       <hr class="divider" />
-      <p class="note">🔒 For security, change this temporary password as soon as you sign in. Do not share it with anyone.</p>
+      <p class="note">🔒 For your security, you will be prompted to choose a new password upon your first sign in.</p>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Your CA Admin Account — Temporary Password',
+      subject: 'Your CA Hub Office Admin Account Credentials',
       html,
     });
   },
@@ -177,44 +409,61 @@ const emailService = {
     const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`;
     const roleLabel = designation ? ` (${designation})` : '';
     const html = baseTemplate(
-      'Your CA Office Employee Account',
+      'Your CA Hub Employee Account',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>Your CA office has created an employee account for you${roleLabel}.</p>
-      <p>Use these credentials to sign in. You will be asked to set a new password after your first login.</p>
-      <p><strong>Login ID (Email):</strong> ${user.email}</p>
-      <p><strong>Temporary Password:</strong></p>
-      <div class="token-box" style="letter-spacing:2px;font-size:18px;">${temporaryPassword}</div>
-      <p style="text-align:center;">
-        <a class="btn" href="${loginUrl}">Sign In</a>
-      </p>
+      <h2>Employee Account Invitation</h2>
+      <p>Hello <strong>${user.name}</strong>,</p>
+      <p>Your CA Office has created an employee workspace for you${roleLabel}.</p>
+      <p>Use the credentials below to log in:</p>
+
+      <div class="info-card">
+        <table width="100%" cellpadding="4" cellspacing="0">
+          <tr>
+            <td class="info-label">Login ID (Email):</td>
+            <td class="info-value" align="right">${user.email}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Temporary Password:</td>
+            <td class="info-value" align="right" style="color:#C4A574;font-size:15px;">${temporaryPassword}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="btn-container">
+        <a class="btn" href="${loginUrl}">Sign In to Workspace</a>
+      </div>
+
       <hr class="divider" />
-      <p class="note">🔒 Change this temporary password as soon as you sign in. Do not share it with anyone.</p>
+      <p class="note">🔒 Please change this temporary password immediately after signing in.</p>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Your CA Office Login — Temporary Password',
+      subject: 'Your CA Hub Employee Account Invitation',
       html,
     });
   },
 
   async sendPasswordChangedEmail(user) {
     const html = baseTemplate(
-      'Password Changed',
+      'Security Alert: Password Changed',
       `
-      <p>Hi <strong>${user.name}</strong>,</p>
-      <p>Your CA Management password was successfully changed.</p>
-      <p>If you made this change, no further action is needed.</p>
-      <p class="note">🔒 If you did NOT make this change, please contact your administrator immediately or reset your password.</p>
-      <p style="text-align:center;">
-        <a class="btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/forgot-password">Reset Password</a>
-      </p>
+      <h2>Password Successfully Updated</h2>
+      <p>Hello <strong>${user.name}</strong>,</p>
+      <p>The password for your <strong>CA Hub</strong> account was recently changed.</p>
+      <p>If you performed this action, no further steps are required.</p>
+      
+      <hr class="divider" />
+      <p class="note" style="color:#B45309 !important; font-weight:600;">⚠️ If you did NOT make this change, your account may be compromised. Please reset your password immediately or contact your office administrator.</p>
+
+      <div class="btn-container">
+        <a class="btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/forgot-password">Secure Account / Reset</a>
+      </div>
       `
     );
     return this.sendEmail({
       to: user.email,
-      subject: 'Password Changed — CA Management',
+      subject: 'Security Alert: CA Hub Password Changed',
       html,
     });
   },
