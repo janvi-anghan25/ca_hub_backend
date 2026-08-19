@@ -155,7 +155,7 @@ const startServer = async () => {
 
 startServer();
 
-const socket = net.createConnection(587, 'smtp.gmail.com');
+const socket = net.createConnection(process.env.SMTP_PORT, 'smtp.gmail.com');
 socket.setTimeout(8000);
 socket.on('connect', () => { console.log('CONNECTED — not blocked'); socket.end(); });
 socket.on('timeout', () => console.log('TIMED OUT — Render is blocking this port'));
