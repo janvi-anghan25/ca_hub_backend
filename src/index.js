@@ -60,6 +60,8 @@ app.use(
   })
 );
 
+app.set('trust proxy', 1); // trust Render's proxy for accurate client IPs
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
