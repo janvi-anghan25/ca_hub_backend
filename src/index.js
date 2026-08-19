@@ -93,6 +93,7 @@ app.use(compression());
 
 // Static file serving
 app.use('/uploads', express.static(uploadsDir));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Request logging
 if (process.env.NODE_ENV !== 'test') {

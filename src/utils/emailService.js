@@ -1,13 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import logger from './logger.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const logoPath = path.join(__dirname, '../assets/ca-logo-dark.png');
+const LOGO_URL = `${process.env.SERVER_URL || 'http://localhost:8000'}/assets/ca-logo.png`;
 
 let resendClient = null;
 const getResendClient = () => {
@@ -60,10 +55,23 @@ const baseTemplate = (title, content) => `
       box-shadow: 0 8px 24px rgba(15, 47, 42, 0.06);
     }
     .header {
-      background: linear-gradient(135deg, #0A221E 0%, #0F2F2A 60%, #1A4A42 100%);
-      padding: 28px 24px 24px;
-      text-align: center;
+      background-color: #0A0E0D;
+      background: linear-gradient(135deg, #0A0E0D 0%, #14181A 55%, #1C2224 100%);
+      padding: 24px 28px;
+      text-align: left;
       border-bottom: 3px solid #C4A574;
+    }
+    .header .logo-wrap {
+      max-width: 220px;
+      margin: 0;
+    }
+    .header img.logo {
+      width: 100%;
+      max-width: 220px;
+      height: auto;
+      display: block;
+      border: 0;
+      outline: none;
     }
     .body {
       padding: 36px 36px 30px;
@@ -164,35 +172,10 @@ const baseTemplate = (title, content) => `
 </head>
 <body>
   <div class="email-container">
-    <div class="header" style="background: linear-gradient(135deg, #0A221E 0%, #0F2F2A 60%, #1A4A42 100%); padding: 28px 24px 24px; text-align: center; border-bottom: 3px solid #C4A574;">
-      <!-- Seamless Brand Logo Table (Zero white background artifact) -->
-      <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
-        <tr>
-          <!-- Left Emblem Badge -->
-          <td valign="middle" style="padding-right: 14px; text-align: center;">
-            <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-              <tr>
-                <td align="center" valign="middle" style="width: 50px; height: 50px; background: #0A221E; border: 2px solid #C4A574; border-radius: 12px; text-align: center; vertical-align: middle;">
-                  <span style="font-family: Arial, Helvetica, sans-serif; font-weight: 900; font-size: 21px; color: #FFFFFF; letter-spacing: -0.5px; line-height: 1; display: inline-block;">
-                    CA<span style="color: #C4A574; font-size: 17px; margin-left: 2px;">&#10003;</span>
-                  </span>
-                </td>
-              </tr>
-            </table>
-          </td>
-
-          <!-- Right Brand Typography -->
-          <td valign="middle" align="left" style="text-align: left;">
-            <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: bold; color: #FFFFFF; line-height: 1.1; margin: 0; padding: 0;">
-              CA <span style="color: #C4A574;">Hub</span>
-            </div>
-            <div style="height: 2px; background: #C4A574; margin: 5px 0 5px; width: 185px; font-size: 1px; line-height: 1px;">&nbsp;</div>
-            <div style="font-family: Arial, Helvetica, sans-serif; font-size: 9.5px; font-weight: bold; color: #A8C5BE; letter-spacing: 3px; text-transform: uppercase; margin: 0; padding: 0; line-height: 1;">
-              CHARTERED ACCOUNTANTS
-            </div>
-          </td>
-        </tr>
-      </table>
+    <div class="header">
+      <div class="logo-wrap">
+        <img class="logo" src="${LOGO_URL}" alt="CA Hub - Chartered Accountants" width="220" />
+      </div>
     </div>
     
     <div class="body">
@@ -213,33 +196,15 @@ const emailService = {
     const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'onboarding@resend.dev';
     const formattedFrom = `"${fromName}" <${fromEmail}>`;
 
-    const attachments = [];
-    if (fs.existsSync(logoPath)) {
-      attachments.push({
-        filename: 'ca-logo.png',
-        path: logoPath,
-        cid: 'calogo@brand',
-      });
-    }
-
     // 1. Resend API Priority (if RESEND_API_KEY is configured)
     if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 'your_resend_api_key') {
       try {
         const resend = getResendClient();
-        const resendAttachments = [];
-        if (fs.existsSync(logoPath)) {
-          resendAttachments.push({
-            filename: 'ca-logo.png',
-            content: fs.readFileSync(logoPath),
-          });
-        }
-
         const { data, error } = await resend.emails.send({
           from: formattedFrom,
           to: Array.isArray(to) ? to : [to],
           subject,
           html,
-          attachments: resendAttachments.length ? resendAttachments : undefined,
         });
 
         if (error) {
@@ -273,7 +238,6 @@ const emailService = {
         to,
         subject,
         html,
-        attachments,
       });
       logger.info(`[SMTP Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
       return info;
