@@ -159,7 +159,7 @@ const socket = net.createConnection(587, 'smtp.gmail.com');
 socket.setTimeout(8000);
 socket.on('connect', () => { console.log('CONNECTED — not blocked'); socket.end(); });
 socket.on('timeout', () => console.log('TIMED OUT — Render is blocking this port'));
-socket.on('error', (e) => console.log('ERROR:', e.message));
+socket.on('error', (e) => console.log('ERROR:', e));
 
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Promise Rejection:', err.message);
