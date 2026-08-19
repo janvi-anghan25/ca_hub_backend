@@ -24,9 +24,6 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS?.replace(/\s+/g, ''), // strip accidental spaces in 16-char app passwords
     },
-    tls: {
-      rejectUnauthorized: false,
-    },
   });
 };
 
