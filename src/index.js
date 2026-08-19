@@ -10,7 +10,6 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import net from 'net';
 
 import connectDB from './config/database.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -154,12 +153,6 @@ const startServer = async () => {
 };
 
 startServer();
-
-const socket = net.createConnection(process.env.SMTP_PORT, 'smtp.gmail.com');
-socket.setTimeout(8000);
-socket.on('connect', () => { console.log('CONNECTED — not blocked'); socket.end(); });
-socket.on('timeout', () => console.log('TIMED OUT — Render is blocking this port'));
-socket.on('error', (e) => console.log('ERROR:', e));
 
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Promise Rejection:', err.message);

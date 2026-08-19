@@ -1,31 +1,19 @@
-import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
+import * as brevo from '@getbrevo/brevo';
 import logger from './logger.js';
 
 const LOGO_URL = `${process.env.SERVER_URL || 'http://localhost:8000'}/assets/ca-logo.png`;
 
-let resendClient = null;
-const getResendClient = () => {
-  if (!resendClient && process.env.RESEND_API_KEY) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+let brevoClient = null;
+const getBrevoClient = () => {
+  if (!brevoClient) {
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not configured.');
+    }
+    brevoClient = new brevo.BrevoClient({ apiKey: process.env.BREVO_API_KEY });
   }
-  return resendClient;
+  return brevoClient;
 };
 
-const createTransporter = () => {
-  const port = parseInt(process.env.SMTP_PORT, 10) || 587;
-  const isSecure = port === 465 || process.env.SMTP_SECURE === 'true';
-
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port,
-    secure: isSecure,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS?.replace(/\s+/g, ''), // strip accidental spaces in 16-char app passwords
-    },
-  });
-};
 
 const baseTemplate = (title, content) => `
 <!DOCTYPE html>
@@ -190,57 +178,25 @@ const baseTemplate = (title, content) => `
 const emailService = {
   async sendEmail({ to, subject, html }) {
     const fromName = process.env.EMAIL_FROM_NAME || 'CA Hub';
-    const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'onboarding@resend.dev';
-    const formattedFrom = `"${fromName}" <${fromEmail}>`;
+    const fromEmail = process.env.EMAIL_FROM || 'no-reply@yourdomain.com';
 
-    // 1. Resend API Priority (if RESEND_API_KEY is configured)
-    if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 'your_resend_api_key') {
-      try {
-        const resend = getResendClient();
-        const { data, error } = await resend.emails.send({
-          from: formattedFrom,
-          to: Array.isArray(to) ? to : [to],
-          subject,
-          html,
-        });
-
-        if (error) {
-          logger.error(`[Resend Email] Failed to send to ${to}:`, error.message);
-          throw error;
-        }
-
-        logger.info(`[Resend Email] Successfully sent to ${to}: "${subject}" (id: ${data?.id})`);
-        return data;
-      } catch (error) {
-        logger.error(`[Resend Email] Error sending to ${to}:`, error.message);
-        throw error;
-      }
-    }
-
-    // 2. SMTP Priority / Fallback (Gmail, etc.)
-    const isSmtpConfigured =
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS &&
-      process.env.SMTP_USER !== 'your@email.com';
-
-    if (!isSmtpConfigured) {
-      logger.warn(`[Email] Neither RESEND_API_KEY nor SMTP configured — skipped email to ${to}: "${subject}"`);
-      return { skipped: true };
-    }
+    const recipients = (Array.isArray(to) ? to : [to]).map((email) => ({ email }));
 
     try {
-      const transporter = createTransporter();
-      const info = await transporter.sendMail({
-        from: formattedFrom,
-        to,
+      const client = getBrevoClient();
+      const result = await client.transactionalEmails.sendTransacEmail({
+        sender: { name: fromName, email: fromEmail },
+        to: recipients,
         subject,
-        html,
+        htmlContent: html,
       });
-      logger.info(`[SMTP Email] Sent to ${to}: ${subject} (messageId: ${info.messageId})`);
-      return info;
-    } catch (error) {
-      logger.error(`[SMTP Email] Failed to send to ${to}:`, error.message);
-      throw error;
+
+      logger.info(`[Brevo] Sent to ${to}: "${subject}" (messageId: ${result?.messageId})`);
+      return result;
+    } catch (err) {
+      const errMsg = err?.body?.message || err.message;
+      logger.error(`[Brevo] Error sending to ${to}:`, errMsg);
+      throw new Error(errMsg);
     }
   },
 
